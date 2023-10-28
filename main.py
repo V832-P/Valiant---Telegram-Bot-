@@ -707,5 +707,84 @@ def admin_ekleme(msg):
 
 
 
+# gerekli durumlar için adminin yetkisinin geri alınması 
+@ValiantBot.message_handler(commands=["unadmin"])
+def admin_gerial(msg):
+
+    # isteyen user ve id si
+    command_inviter = msg.from_user
+    inviter_id = str(command_inviter.id)
+    # gerekli durumlar için log kaydı 
+    make_log(
+        command_msg=msg
+    )
+    
+    # owner kontrolü 
+    if is_owner(inviter_id):
+
+
+        
+        # mesaj yanıtlama kontrölü
+        if msg.reply_to_message != None:
+            target_id = str(msg.reply_to_message.from_user.id)
+            targetFullname= str(msg.reply_to_message.from_user.full_name)
+
+            unadm_status = un_admin(target_id)
+            ValiantBot.reply_to(msg, unadm_status[1])
+            return
+        
+        elif len(msg.text.split(" ")) >= 2:
+            target_user_id = msg.text.split(" ")[1]
+            if not target_user_id.isnumeric():
+                err_msg = "[ - ] Hata: Kullanıcı id si nümerik olmalıdır."
+                ValiantBot.reply_to(msg, text=err_msg)
+                return    
+                
+            results_is = un_admin(str(target_user_id))
+            ValiantBot.reply_to(msg, text=results_is[1])
+            return
+        else:
+            ValiantBot.reply_to(msg, "Lütfen bir mesaj yanıtlayınız.")
+            return
+        
+
+# bir kişinin yetkisi varmı kontrol etmek için
+@ValiantBot.message_handler(commands=["isadmin"])
+def admin_kontrol(msg):
+    command_inviter = msg.from_user
+    inviter_id = str(command_inviter.id)
+    make_log(
+        command_msg=msg
+    )
+    if is_yetkili(inviter_id):
+
+        if msg.reply_to_message != None:
+            target_id = str(msg.reply_to_message.from_user.id)
+            target_username = str(msg.reply_to_message.from_user.username)
+        
+
+            if is_yetkili(target_id):
+                ValiantBot.reply_to(msg, f"User: @{str(target_username)}\nId: {str(target_id)}\nStatus: is admin ✅ ")
+            else:
+                ValiantBot.reply_to(msg, f"User: @{str(target_username)}\nId: {str(target_id)}\nStatus: not admin ❌ ")
+
+
+        else:
+            target_id = str(msg.from_user.id)
+            target_username = str(msg.from_user.username)
+
+            if is_yetkili(target_id):
+                ValiantBot.reply_to(msg, f"User: @{str(target_username)}\nId: {str(target_id)}\nStatus: is admin ✅")
+
+            else:
+                ValiantBot.reply_to(msg, f"User: @{str(target_username)}\nId: {str(target_id)}\nStatus: not admin ❌")
+
+
+
+
+
+
+
+
 # loop the telegram bot
 ValiantBot.infinity_polling()
