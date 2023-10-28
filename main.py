@@ -648,9 +648,8 @@ term_output.INFO_OUT("Server source controller thread started ")
 # COMMAND AREA 
 
 @ValiantBot.message_handler(commands=["start"])
-def admin_ekleme(msg):
+def start_the_bot(msg):
 
-    # komutu isteyen kişi belirlenir ve id si alınır 
     command_inviter = msg.from_user
     inviter_id = str(command_inviter.id)
     make_log(
@@ -658,7 +657,6 @@ def admin_ekleme(msg):
             )
     #sistemin çalıştığı makine ekranına basit bilgiler verilir debug içindir 
     
-    # Adminlerin admin ekleyerek dömgü oluşturmasını engellemek için yetki kontrolü
     if not is_yetkili(inviter_id):
         return
 
