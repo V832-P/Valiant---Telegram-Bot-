@@ -9,6 +9,8 @@ import datetime
 import telebot
 
 
+from botlib import term_output
+
 
 def print_banner() -> None:
     banner_is = """
@@ -122,8 +124,16 @@ DATABASE_INIT_COMMAND  = f"""
     
     
     
+START_MESSAGE = """
+
+
+"""
+
     
-    # PRINT SYSTEM INFORMATIN FROM STARTUP 
+    
+    
+    
+# PRINT SYSTEM INFORMATIN FROM STARTUP 
     
     
 print(f"\nDEGİSKEN BİLGİLERİ:")
@@ -611,3 +621,91 @@ def is_yetkili(telegram_id:str):
         return True
     else:
         return False
+
+
+
+
+# STARTING BOT 
+
+ValiantBot = telebot.TeleBot(token=TELEGRAM_BOT_TOKEN)
+
+# YETKILENDIRME VERITABANINI OLUSTURUR VE ILK OLARAK KURUCU ID SI EKLENIR 
+generate_owner_user(OWNER_TELEGRAM_ID)
+
+# start a server source controler thread 
+sourceControlThread = threading.Thread(
+    target=systemService_SourceController,
+    args=(ValiantBot,), 
+    daemon=True
+)
+sourceControlThread.start()
+term_output.INFO_OUT("Server source controller thread started ")
+
+
+
+
+
+# COMMAND AREA 
+
+@ValiantBot.message_handler(commands=["start"])
+def admin_ekleme(msg):
+
+    # komutu isteyen kişi belirlenir ve id si alınır 
+    command_inviter = msg.from_user
+    inviter_id = str(command_inviter.id)
+    make_log(
+            command_msg=msg
+            )
+    #sistemin çalıştığı makine ekranına basit bilgiler verilir debug içindir 
+    
+    # Adminlerin admin ekleyerek dömgü oluşturmasını engellemek için yetki kontrolü
+    if not is_yetkili(inviter_id):
+        return
+
+
+
+
+@ValiantBot.message_handler(commands=["newadmin"])
+def admin_ekleme(msg):
+
+    # komutu isteyen kişi belirlenir ve id si alınır 
+    command_inviter = msg.from_user
+    inviter_id = str(command_inviter.id)
+    make_log(
+            command_msg=msg
+            )
+    #sistemin çalıştığı makine ekranına basit bilgiler verilir debug içindir 
+    
+    # Adminlerin admin ekleyerek dömgü oluşturmasını engellemek için yetki kontrolü
+    if not is_owner(inviter_id):
+        return
+        
+    # bir mesajın yanıtlanıp yanıtlanmadıgı kontrol edılır 
+    if msg.reply_to_message != None:
+        results_is = add_new_admin(str(msg.reply_to_message.from_user.id))
+        if results_is[0] != "true":
+            ValiantBot.reply_to(msg, f"Hata: {str(results_is[1])}")
+        else:
+            ValiantBot.reply_to(msg, f"işlem başarılı: {str(results_is[1])}")
+        
+    elif len(msg.text.split(" ")) >= 2:
+        target_user_id = msg.text.split(" ")[1]
+        if not target_user_id.isnumeric():
+            err_msg = "[ - ] Hata: Kullanıcı id si nümerik olmalıdır."
+            ValiantBot.reply_to(msg, text=err_msg)
+            return    
+                
+        results_is = add_new_admin(str(target_user_id))
+        ValiantBot.reply_to(msg, text=results_is[1])
+        return
+        
+    else:
+        ValiantBot.reply_to(msg,"Lütfen eklenecek kişinin mesajını yanıtlayınız.")
+        return 
+
+
+
+
+
+# loop the telegram bot
+ValiantBot.infinity_polling()
