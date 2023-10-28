@@ -708,7 +708,7 @@ def admin_ekleme(msg):
 
 
 # gerekli durumlar için adminin yetkisinin geri alınması 
-@ValiantBot.message_handler(commands=["unadmin"])
+@ValiantBot.message_handler(commands=["deladmin"])
 def admin_gerial(msg):
 
     # isteyen user ve id si
@@ -749,7 +749,7 @@ def admin_gerial(msg):
         
 
 # bir kişinin yetkisi varmı kontrol etmek için
-@ValiantBot.message_handler(commands=["isadmin"])
+@ValiantBot.message_handler(commands=["checkadmin"])
 def admin_kontrol(msg):
     command_inviter = msg.from_user
     inviter_id = str(command_inviter.id)
