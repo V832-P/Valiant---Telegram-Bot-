@@ -954,5 +954,63 @@ Adres: `{str(data["ip"])}`
                 )
 
 
+
+# sistem internet hız kontrolü 
+@ValiantBot.message_handler(commands=["netspeed"])
+def network_speed_status(msg):
+    command_inviter = msg.from_user
+    inviter_id = str(command_inviter.id)
+    make_log(
+        command_msg=msg
+    )
+
+    if is_yetkili(inviter_id):
+
+        # hata durumunda çökmeyi engellemek için try bloğu 
+        try:
+            ValiantBot.reply_to(msg, "Sunucu hız testi deneniyor lütfen bekleyiniz...")
+            down_is, up_is, ping_is = network.internet_speed()
+            down_is = round(down_is, 1)
+            up_is = round(up_is, 1)
+            ping_is = round(ping_is, 1)
+
+            ValiantBot.reply_to(msg,f"Downloads: {str(down_is)}\nUpload: {str(up_is)}\nPing: {str(ping_is)} ms\nMbps cinsindendir.")
+        except Exception as err:
+            ValiantBot.reply_to(msg, text="internet testi sırasında hata gerçekleşti.")
+
+
+@ValiantBot.message_handler(commands=["hwstatus"])
+def hardware_status(msg):
+    command_inviter = msg.from_user
+    inviter_id = str(command_inviter.id)
+    make_log(
+        command_msg=msg
+        )
+    if is_yetkili(inviter_id):
+
+        try:
+            toplam_ram, kullanılan_mik, yuzdelik = hardware.get_memory_usage()
+            toplam_ram = round(toplam_ram, 1)
+            kullanılan_mik = round(kullanılan_mik, 1)
+            know_user = os.getlogin()
+            os_sysyem_is = platform.platform()
+            cpu_usage_is = hardware.get_cpu_usage()
+            batarya_durumu = hardware.get_battery_percentage()
+            output_data = f"""Sistem durumu:
+
+Ram: {str(toplam_ram)}/{str(kullanılan_mik)} GB, %{str(yuzdelik)}
+Cpu kullanımı: %{str(cpu_usage_is)}
+Cpu adet: {str(os.cpu_count())}
+User: {str(know_user)}
+Os: {str(os_sysyem_is)}
+Batarya durumu: {str(batarya_durumu)}
+
+"""
+            ValiantBot.reply_to(msg, output_data)
+        except Exception as err:
+            ValiantBot.reply_to(msg, text="sistem durumu alınması sırasında hata gerçekleşti.")
+            print(err)
+
+
 # loop the telegram bot
 ValiantBot.infinity_polling()
