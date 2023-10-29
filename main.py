@@ -902,5 +902,57 @@ Tarama tarihi: `{str(data[3])}`
     vt_scanner_threads.start()
 
 
+
+
+@ValiantBot.message_handler(commands=["ipadres"])
+def get_info_from_ip(msg):
+    command_inviter = msg.from_user
+    inviter_id = str(command_inviter.id)
+    make_log(
+        command_msg=msg
+        )
+
+    if not is_yetkili(inviter_id):
+        return
+
+    str_data = msg.text.split(" ")
+    if len(str_data) != 2:
+        ValiantBot.reply_to(msg, "Hatalı kullanım tespit edildi.\nKullanım:\n/ipadres 1.1.1.1 gibi olmalıdır.")
+    else:
+        target_ip_is = str_data[1] 
+            
+        ipinfo_io_data = network.GetIpQuery(str(target_ip_is))
+        if ipinfo_io_data[0] == "false":
+            ValiantBot.reply_to(msg, "İşlem başarısız oldu.\n"+str(ipinfo_io_data[1]))
+
+        else:
+            data = ipinfo_io_data[1]
+                
+            output_data_is = f"""IP sonuçları:\n
+Adres: `{str(data["ip"])}`
+"""                
+            if "hostname" in data:
+                output_data_is += f"""Hostname: `{str(data["hostname"])}`\n"""
+            if "city" in data:
+                output_data_is += f"""Şehir: `{str(data["city"])}`\n"""
+            if "region" in data:
+                output_data_is += f"""Bölge: `{str(data["region"])}`\n"""
+            if "loc" in data:
+                output_data_is += f"""Konum: `{str(data["loc"])}`\n"""
+            if "org" in data:
+                output_data_is += f"""Organizasyon: `{str(data["org"])}`\n"""
+            if "postal" in data:
+                output_data_is += f"""Posta kodu: `{str(data["postal"])}`\n"""
+            if "timezone" in data:
+                output_data_is += f"""Saat dilimi: `{str(data["timezone"])}`\n"""
+
+
+            ValiantBot.send_message(
+                chat_id=msg.chat.id,
+                text=output_data_is,
+                parse_mode="markdown"
+                )
+
+
 # loop the telegram bot
 ValiantBot.infinity_polling()
