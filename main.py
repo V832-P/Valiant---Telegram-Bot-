@@ -18,6 +18,8 @@ from telebot import types
 import platform
 from botlib import term_output
 import botlib.vt_url as vt_url
+import botlib.network as network
+import botlib.hardware as hardware
 
 def print_banner() -> None:
     banner_is = """
