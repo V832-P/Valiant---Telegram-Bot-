@@ -52,6 +52,8 @@ TELEGRAM_BOT_TOKEN = ""
 
 
 # set app varaibles 
+# Yeniden programlanması veya dağıtılması durumunda zamandan ve kod kalitesinden kazanmak için
+# genel sistem değişkenlerini kodun başında tanımladık
 APP_NAME = "Valiant @ CyberSecurity"
 APP_VERSION = "v0.0.1#dev"
 TEMP_DIR = "tmp"+os.sep
@@ -63,6 +65,8 @@ SALT_TEXT = f"prime_sys_hash_$_#44206amr41"
 STATIC_SALT = bytes(SALT_TEXT, "utf-8")
 
 # SET THE TOR PROXY 
+# Web sitelerini taramak, güvenli istekler atmak için 
+# sisteme göre otomatik conf'u belirledik 
 if os.name == "nt":
     TOR_PROXY_DEFAULT_PORT="9150"
 else:
@@ -74,6 +78,7 @@ TOR_PROXY_CONFIG = {
     
 }
 
+# http ve https için proxy nin ayarlanması  
 TOR_PROXY = {
     "http":f"""socks5://{TOR_PROXY_CONFIG["host"]}:{TOR_PROXY_CONFIG["port"]}""",
     "https":f"""socks5://{TOR_PROXY_CONFIG["host"]}:{TOR_PROXY_CONFIG["port"]}"""
@@ -82,6 +87,8 @@ TOR_PROXY = {
 
 
 # SET DATABASE TABLE NAMES
+# kod genelin karışıklık olmaması için tablo isimleri direk 
+# değişkenlere atandı 
 BANNED_USERS_TABLE = "banned_users"
 LOG_DATABASE_TABLE = "telegram_log"
 AUTH_TABLE_NAME = "telegram_users"
@@ -89,7 +96,9 @@ CHAT_ID_LOG_TABLE_NAME = "chats_logs"
 
 
 
-# DOGRULAMA SISTEMI ICIN GEREKLI VERITABANI SEMASI  
+# DOGRULAMA SISTEMI ICIN GEREKLI VERITABANI SEMASI
+# Bot sistemin temel ve en önemli kısmı veritabanı şeması 
+# admin yetkilendirme sistemi & veri kayıt sistemi ve duyuru sistemi 
 DATABASE_INIT_COMMAND  = f"""
     CREATE TABLE IF NOT EXISTS {AUTH_TABLE_NAME} (
     id INTEGER NOT NULL,
@@ -143,8 +152,8 @@ START_MESSAGE = """
     
     
 # PRINT SYSTEM INFORMATIN FROM STARTUP 
-    
-    
+# komsol üzerinden bot başlatılınca doğru başlatılmışmı 
+# veya hangi değişkenleri kullanıyor diye basit bir bilgi ekarnı
 print(f"\nDEGİSKEN BİLGİLERİ:")
 print("-"*50)
 print(f"[+] Owner Telegram id       : {OWNER_TELEGRAM_ID}")
@@ -158,6 +167,8 @@ print("\n\nLOG KONSOLU:")
 print("-"*50)
 
 # IF BOT TEMP DIR NOT EXISTS MAKE A TEMP DIR 
+# neredeyse tüm kodda lazım olan geçici işelm dizini tmp 
+# nin kontrolü yapılıyor 
 if not os.path.exists(TEMP_DIR):
     os.makedirs(TEMP_DIR)
 
@@ -167,12 +178,16 @@ if not os.path.exists(TEMP_DIR):
 
 
 # MAIN DATABSE CONNECTİONS 
+# Ana veritabanı bağlantısı açılıyor 
+# sqlite olması nedeniyle tek doysa ve tek bağlantı mantığı ile ilermektedir 
 VALIANT_DATABASE = sqlite3.connect(database=MAIN_DATABASE)
 VALIANT_DATABASE_CURSOR = VALIANT_DATABASE.cursor()
 
 
 
 # execute inital database command 
+# Sistem açılınca veritabanı sisteminin otomatik kontrol edilmesi 
+# eğer db silinmişse kodun çökmemesi için tekrar oluşturulması
 VALIANT_DATABASE_CURSOR.executescript(DATABASE_INIT_COMMAND)
 VALIANT_DATABASE.commit()
 
@@ -180,12 +195,17 @@ VALIANT_DATABASE.commit()
 
 
 # define connection functions 
+# önceki bot projesinden gelen bağlantı fonksiyonlarının 
+# tek fonksiyon ile zaman dan kazandırılması 
 def ConnectMainDatabase() -> object:
     return VALIANT_DATABASE, VALIANT_DATABASE_CURSOR
 
 
 
 # def source controller services   
+# Kullanıcı sürekli sunucuda veya bilgisayar başında olamaz 
+# bu zamanlarda sunucda birşey ters giderse diye sistem çökmeden 
+# kullanıcıya bildirim veren bir servis gerekmektedir 
 def systemService_SourceController(bot_object) -> None:
     while True:
         toplam_ram, kullanılan_mik, yuzdelik = hardware.get_memory_usage()
@@ -215,7 +235,8 @@ Cpu kullanım oranı: %{cpu_usage_is}
                 time.sleep(60)
                 
 
-
+# duyuru sisteminin çalışması için bot un erişimi olan chat lerin id lerini alır 
+# ve veritabanına kaydeder 
 def save_this_chat(chat_id) -> None:
     """
     herhangi bir parametre almadan sadece bota gelen mesajlara göre 
@@ -244,6 +265,8 @@ def save_this_chat(chat_id) -> None:
 
 
 # system statics functions 
+# owner veya diğer adminler sistem istatistiklerin görmek isterlerse diye 
+# tek fonksiyon ile bunların elde edilmesi
 def GLOBAL_SYSTEM_STATUS():
     user_db, user_db_controller = ConnectMainDatabase()
     banned_db, banned_db_controller = ConnectMainDatabase()
@@ -274,7 +297,7 @@ Powered By {APP_NAME} {APP_VERSION}
 
 
 
-
+# bir kullanıcı sistemden yasaklımı diye kontrol etmek için pratik ve hızlı bir fonksiyon
 def is_banned(target_chat_id):
     """
     telegram id sini parametre olarak alır ve kullanıcı sistemden banlımı değilmi kontrol eder
@@ -308,6 +331,8 @@ def is_banned(target_chat_id):
 
 
 # SUREKLI GEREKSIZ KOD TEKRARI OLMASIN DIYE MAKE LOG ILE TEMIZ LOG KAYDI 
+# Güvenlik için her zaman kayıt tutmak iyidir bu nedenle bot üzerinde yapılan her aktivite 
+# yetkili veya yetkisiz otomatik veritabanına kaydı sağlanıyor 
 def make_log(command_msg):
     """
     sistem için otomatik log kaydı sağlayan fonksiyon 
@@ -399,7 +424,8 @@ def make_log(command_msg):
 
 
 
-
+# Veritabanı sisteminde kayıt tarihlerinin doğru girilmesi için 
+# local time ı döndüren bir fonksiyon
 def ReturnCreateTime():
     """ herhangi bir arguman almaz
 
@@ -411,7 +437,10 @@ def ReturnCreateTime():
     return time_is
 
 
-
+# Sistem başlatıldığı zaman veritabanın silinmiş veya zarar görmüş olma ihtimaline karşı 
+# owner kullanıcı kontrol edilir eğer db de bulunamazsa otomatik oluşturulur 
+# sistem mantığında 1 adet owner olacak şekilde tasarlanmıştır 
+# db ye elle mudahale edilmediği sürece 2. ownerin eklenmesi mümkün değildir
 def generate_owner_user(telegram_id:str) -> list:
     # db bağlantısı 
     auth_db, auth_db_controller = ConnectMainDatabase()
@@ -436,7 +465,8 @@ def generate_owner_user(telegram_id:str) -> list:
 
 
 
-
+# Sistemde uygunsuz davranışlar sergileyen kullanıcıların erişimini engellemek için 
+# kullanıcı yasaklama fonksiyonu
 def ban_user(telegram_id, ban_sebebi):
     ban_sebebi = str(ban_sebebi)
     telegram_id = str(telegram_id)
@@ -473,7 +503,8 @@ def ban_user(telegram_id, ban_sebebi):
 
 
 
-
+# gerekli durumda manuel olarak sql den ban kaldırma işinden kurtulmak için
+# ban işlemini geri alan bir fonksiyon
 def un_ban_user(telegram_id:str) -> list:
 
     if is_yetkili(telegram_id=telegram_id):
