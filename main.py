@@ -7,10 +7,17 @@ import textwrap
 import sqlite3
 import datetime
 import telebot
-
-
+import threading
+import shutil
+import os
+import random
+import requests
+import time
+from pydub import AudioSegment
+from telebot import types
+import platform
 from botlib import term_output
-
+import botlib.vt_url as vt_url
 
 def print_banner() -> None:
     banner_is = """
@@ -782,6 +789,117 @@ def admin_kontrol(msg):
 
 
 
+@ValiantBot.message_handler(commands=["scanurl"])
+def scan_target_url(msg):
+    command_inviter = msg.from_user
+    inviter_id = str(command_inviter.id)
+    # Log kaydı yapıldı 
+    make_log(
+        command_msg=msg
+        )
+
+    if not is_yetkili(inviter_id):
+        return
+
+
+    # komut bir mesajı yanıtlayarakmı çalıştırılmış kontrol ediliyor 
+    if msg.reply_to_message != None:
+
+        # öyle iste hedef olarak yanıtlanan mesaj seçiliyor 
+        target_text = msg.reply_to_message.text        
+        target_url_is = target_text
+        
+    # Eğer yanıtlama olarak değil ise komuttan sonra url verildiği varsayılacak
+    else:
+            
+        # hedef olarak komutun verildiği mesaj seçildi 
+        target_text = msg.text
+        # mesaj " " boşluklar referans alınarak bölündü 
+        str_data = target_text.split(" ")
+
+        # mesajın yapısı kontrol edildi ve uygun değilse geri bildirim verilerek iptal edildi işlem 
+        if len(str_data) != 2:
+            ValiantBot.reply_to(msg, "Hatalı kullanım tespit edildi.\nKullanım:\n/urlscan google.com gibi olmalıdır.")
+            return ""
+            
+        # Eğer format uygunsa hedef target_url_is değişkenine atandı 
+        target_url_is = str_data[1]
+
+
+        
+    # Programın tıkanmasını engellemek için threads'a fonksiyon hazırladık 
+    def run_as_threads():
+
+        # yanıt olarak mesaj atılacağı için sohbet tipine uygun olarak chat id alındı 
+        if msg.chat.type == "private":
+            chat_id_is = msg.from_user.id
+        else:
+            chat_id_is = msg.chat.id
+
+        # alınan url nin geçerli olup olmadığı formata uygunluğu kontrol ediliyor 
+        if not vt_url.is_url(target_url_is):
+            ValiantBot.reply_to(msg, "URL geçersizdir lütfen kontrol ediniz.")
+            return ""
+
+        # Analizin başladığı hakkında bir mesaj gönderildi ve daha sonrası için kaydedildi 
+        main_msg = ValiantBot.send_message(chat_id=chat_id_is   ,text=f"Analiz başlatıldı lütfen bekleyiniz...\nHedef: `{str(target_url_is)}`"
+            ,parse_mode="markdown"                         
+                )
+            
+        # Sonraki düzenlemeler için mesajın benzersiz id si alındı  
+        main_msg_id = main_msg.message_id
+
+        # Hedef url VirusTotal api için yazdıgımız kutuphane fonksiyonuna verildi 
+        scan_adım_1 = vt_url.virustotal_url_scanner(target_url=target_url_is, vt_api_key=VIRUSTOTAL_API_KEY)
+
+        # Gönerdiğimiz bilgilendirme mesajı silinmiş ise hata almamak için kontrol yaptı 
+        if main_msg.text is not None:
+                
+            # Tarama sonucunda VirüsTotal isteği kabul etmişmi bakıyoruz   
+            if scan_adım_1[0] == "true":
+
+                # Apinin sonuçları takip etmemiz için verdiği id yi alıyoruz 
+                izleme_id = scan_adım_1[1]
+
+                # İSteğin kabul edildiği ve yaklasık 25sn sonra cevap geleceğini belirttik 
+                ValiantBot.edit_message_text(text="`VirüsTotal isteği kabul etti analiz bekleniyor.. (tahmini 25sn)`",
+                    chat_id=chat_id_is, message_id=main_msg_id,
+                    parse_mode="markdown"
+                    )
+
+                # Gereksiz kaynak yemesin diye ve bekleme sağlasın diye sleep kullanıyoruz
+                time.sleep(25)
+
+                # 2. adım olarak api den tarama sonuçlarını istiyoruz 
+                scan_adım_2 = vt_url.virustotal_url_response_handler(vt_api_key=VIRUSTOTAL_API_KEY, is_response_id=izleme_id)
+
+                # eğer istek başarılı ise devam ediyoruz
+                if scan_adım_2[0] == "true":
+                    data = scan_adım_2[1]   
+                        
+                    # Yollanacak bilgileri markdown şeklinde eklemeler yaparak ayarlıyoruz 
+                    output_data_is = f"""Tarama sonuçları:\n\n
+Adres: `{str(data[0])}`
+Tespit: `{str(data[1])} / {str(data[2])}`
+Tarama tarihi: `{str(data[3])}`
+[VirüsTotal Linki]({str(data[4])})
+"""                 
+                    # Ana mesajı düzenleyerek bu bilgileri ekliyoruz ve return ile işlemi bitiriyoruz
+                    ValiantBot.edit_message_text(chat_id=chat_id_is ,text=output_data_is ,message_id=main_msg_id,parse_mode="markdown")
+                    return ""
+                    
+                else:
+                    # 2.adımda hata alınırsa geri bildiim
+                    ValiantBot.edit_message_text(chat_id=chat_id_is,text=f"Hata: {scan_adım_2[1]}", message_id=main_msg_id)
+            else:
+                # 1.adımda hata alınırsa geri bildirim 
+                ValiantBot.edit_message_text(chat_id=chat_id_is, text=f"Hata: {scan_adım_1[1]}", message_id=main_msg_id)
+                return ""
+
+
+    # Threadsın tanımlanması ve başlatılması 
+    vt_scanner_threads = threading.Thread(target=run_as_threads)
+    vt_scanner_threads.start()
 
 
 # loop the telegram bot
